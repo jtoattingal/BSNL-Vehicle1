@@ -19,6 +19,7 @@ interface MonthlyReportViewProps {
   monthlyAllowance?: number;
   closedMonths?: string[];
   onCloseMonth?: (month: string) => Promise<void> | void;
+  isAdmin?: boolean;
 }
 
 export const MonthlyReportView: React.FC<MonthlyReportViewProps> = ({
@@ -30,6 +31,7 @@ export const MonthlyReportView: React.FC<MonthlyReportViewProps> = ({
   monthlyAllowance = DEFAULT_MONTHLY_ALLOWANCE,
   closedMonths = [],
   onCloseMonth,
+  isAdmin = false,
 }) => {
   // Default to August 2026
   const [reportYear, setReportYear] = useState(2026);
@@ -106,15 +108,19 @@ export const MonthlyReportView: React.FC<MonthlyReportViewProps> = ({
             <span className="bg-amber-100 border border-amber-300 text-amber-900 text-xs font-bold px-2.5 py-1 rounded flex items-center gap-1">
               🔒 Month Closed
             </span>
-          ) : (
+          ) : isAdmin ? (
             <button
               onClick={handleCloseMonth}
               disabled={isClosing}
               className="bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold px-3 py-1.5 rounded flex items-center gap-1 transition-colors cursor-pointer"
-              title="Close and lock this month"
+              title="Close and lock this month (Admin only)"
             >
               {isClosing ? 'Closing...' : '🔒 Close Month'}
             </button>
+          ) : (
+            <span className="bg-green-100 border border-green-300 text-green-800 text-xs font-semibold px-2.5 py-1 rounded flex items-center gap-1">
+              ● Month Open
+            </span>
           )}
           <button
             onClick={() => window.print()}

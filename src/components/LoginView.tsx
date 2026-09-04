@@ -5,6 +5,7 @@ import { User } from '../types';
 
 interface LoginViewProps {
   onLogin: (user: User | null) => void;
+  users?: User[];
   logoUrl?: string;
   vehicleImg?: string;
   vehicleNo?: string;
@@ -12,6 +13,7 @@ interface LoginViewProps {
 
 export const LoginView: React.FC<LoginViewProps> = ({
   onLogin,
+  users = [],
   logoUrl,
   vehicleImg,
   vehicleNo = DEFAULT_VEHICLE_NO,
@@ -120,34 +122,87 @@ export const LoginView: React.FC<LoginViewProps> = ({
 
         {/* Login Form Card */}
         <div className="bg-white border border-[#D4DEF0] rounded p-5 shadow-xs">
-          <div className="flex items-center justify-between mb-4">
-            <h2
-              className="text-[#1A2A4A] font-semibold text-base"
-              style={{ fontFamily: "'Work Sans', sans-serif" }}
-            >
-              {isAdminLogin ? 'Admin Login' : 'User Login'}
-            </h2>
+          {/* Login Mode Tabs */}
+          <div className="grid grid-cols-2 p-1 bg-[#EEF2F9] rounded border border-[#D4DEF0] mb-4">
             <button
+              type="button"
               onClick={() => {
-                setIsAdminLogin(!isAdminLogin);
+                setIsAdminLogin(false);
                 setError('');
                 setUsername('');
                 setPassword('');
               }}
-              className="text-[#0055C8] text-xs font-medium hover:underline cursor-pointer"
-              style={{ fontFamily: "'Inter', sans-serif" }}
+              className={`py-2 px-3 text-xs font-bold rounded transition-colors cursor-pointer text-center ${
+                !isAdminLogin
+                  ? 'bg-[#003087] text-white shadow-xs'
+                  : 'text-[#5A6A82] hover:text-[#003087]'
+              }`}
+              style={{ fontFamily: "'Work Sans', sans-serif" }}
             >
-              {isAdminLogin ? '← User Login' : 'Admin Login'}
+              👤 Officer Login
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setIsAdminLogin(true);
+                setError('');
+                setUsername('');
+                setPassword('');
+              }}
+              className={`py-2 px-3 text-xs font-bold rounded transition-colors cursor-pointer text-center ${
+                isAdminLogin
+                  ? 'bg-[#003087] text-white shadow-xs'
+                  : 'text-[#5A6A82] hover:text-[#003087]'
+              }`}
+              style={{ fontFamily: "'Work Sans', sans-serif" }}
+            >
+              🛡️ Admin Login
             </button>
           </div>
 
+          <div className="mb-4">
+            <h2
+              className="text-[#1A2A4A] font-semibold text-base"
+              style={{ fontFamily: "'Work Sans', sans-serif" }}
+            >
+              {isAdminLogin ? 'BSNL Admin Portal' : 'BSNL Officer Logbook'}
+            </h2>
+            <p className="text-xs text-[#5A6A82] mt-0.5" style={{ fontFamily: "'Inter', sans-serif" }}>
+              {isAdminLogin ? 'Enter admin credentials to manage logbook & settings' : 'Select or enter your officer credentials'}
+            </p>
+          </div>
+
           <div className="space-y-3">
+            {!isAdminLogin && users && users.length > 0 && (
+              <div>
+                <label
+                  className="block text-[#5A6A82] text-xs font-medium mb-1 uppercase tracking-wider"
+                  style={{ fontFamily: "'Work Sans', sans-serif" }}
+                >
+                  Select Officer
+                </label>
+                <select
+                  className="w-full border border-[#C8D5EB] rounded px-3 py-2 text-sm text-[#1A2A4A] bg-white focus:outline-none focus:border-[#003087]"
+                  style={{ fontFamily: "'Inter', sans-serif" }}
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                >
+                  <option value="">-- Select Officer from List --</option>
+                  {users.map((u) => (
+                    <option key={u.id} value={u.username}>
+                      {u.name} ({u.username})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
             <div>
               <label
                 className="block text-[#5A6A82] text-xs font-medium mb-1 uppercase tracking-wider"
                 style={{ fontFamily: "'Work Sans', sans-serif" }}
               >
-                Username
+                {isAdminLogin ? 'Admin Username' : 'Username'}
               </label>
               <input
                 className="w-full border border-[#C8D5EB] rounded px-3 py-2 text-sm text-[#1A2A4A] focus:outline-none focus:border-[#003087] focus:ring-1 focus:ring-[#003087]"

@@ -16,8 +16,6 @@ import {
   updateUserPassword,
   getSettings,
   updateSettings,
-  getDbStatus,
-  connectMongo,
 } from './server/db';
 
 dotenv.config();
@@ -38,17 +36,6 @@ async function startServer() {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
   });
 
-  // DB connection status & manual trigger
-  app.get('/api/db-status', (req, res) => {
-    res.json(getDbStatus());
-  });
-
-  app.post('/api/db-connect', async (req, res) => {
-    const { uri } = req.body || {};
-    const result = await connectMongo(uri);
-    res.json({ ...result, status: getDbStatus() });
-  });
-
   // --- API Routes ---
 
   // Entries
@@ -67,7 +54,8 @@ async function startServer() {
       if (!entry.date || !entry.startTime || !entry.placesVisited || !entry.purpose) {
         return res.status(400).json({ error: 'Missing required fields' });
       }
-      const saved = await saveEntry(entry);
+      const isAdmin = req.headers['x-is-admin'] === 'true' || req.body?.user === 'admin' || req.query.isAdmin === 'true';
+      const saved = await saveEntry(entry, isAdmin);
       res.status(201).json(saved);
     } catch (err: any) {
       res.status(500).json({ error: err.message });
@@ -77,7 +65,8 @@ async function startServer() {
   app.put('/api/entries/:id', async (req, res) => {
     try {
       const entry = { ...req.body, id: req.params.id };
-      const saved = await saveEntry(entry);
+      const isAdmin = req.headers['x-is-admin'] === 'true' || req.body?.user === 'admin' || req.query.isAdmin === 'true';
+      const saved = await saveEntry(entry, isAdmin);
       res.json(saved);
     } catch (err: any) {
       res.status(500).json({ error: err.message });
@@ -86,7 +75,8 @@ async function startServer() {
 
   app.delete('/api/entries/:id', async (req, res) => {
     try {
-      const ok = await deleteEntry(req.params.id);
+      const isAdmin = req.headers['x-is-admin'] === 'true' || req.query.isAdmin === 'true';
+      const ok = await deleteEntry(req.params.id, isAdmin);
       res.json({ success: ok });
     } catch (err: any) {
       res.status(400).json({ error: err.message });

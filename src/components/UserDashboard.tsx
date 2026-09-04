@@ -9,14 +9,13 @@ import { formatMonthIndian, DEFAULT_VEHICLE_NO, isMonthClosed } from '../constan
 interface UserDashboardProps {
   currentUser: User;
   entries: LogEntry[];
-  onNewEntry: () => void;
+  onNewEntry: (selectedMonthKey: string) => void;
   onEditEntry?: (entry: LogEntry) => void;
   onReport: () => void;
   onLogout: () => void;
   logoUrl?: string;
   vehicleNo?: string;
   closedMonths?: string[];
-  onCloseMonth?: (month: string) => Promise<void> | void;
 }
 
 export const UserDashboard: React.FC<UserDashboardProps> = ({
@@ -29,7 +28,6 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({
   logoUrl,
   vehicleNo = DEFAULT_VEHICLE_NO,
   closedMonths = [],
-  onCloseMonth,
 }) => {
   // Start from August 2026 as requested
   const [selectedYear, setSelectedYear] = useState(2026);
@@ -40,8 +38,6 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({
   const [currentPw, setCurrentPw] = useState('');
   const [newPw, setNewPw] = useState('');
   const [pwMessage, setPwMessage] = useState('');
-  const [isClosingMonth, setIsClosingMonth] = useState(false);
-  const [closeConfirmOpen, setCloseConfirmOpen] = useState(false);
 
   const currentMonthKey = `${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}`;
   const isCurrentMonthClosed = isMonthClosed(currentMonthKey, closedMonths);
@@ -56,19 +52,6 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({
   const totalUsedKm = useMemo(() => {
     return monthlyEntries.reduce((acc, curr) => acc + curr.km, 0);
   }, [monthlyEntries]);
-
-  async function handleCloseMonth() {
-    if (!onCloseMonth) return;
-    try {
-      setIsClosingMonth(true);
-      await onCloseMonth(currentMonthKey);
-      setCloseConfirmOpen(false);
-    } catch (err: any) {
-      alert(err?.message || 'Failed to close month');
-    } finally {
-      setIsClosingMonth(false);
-    }
-  }
 
   async function handlePasswordChange() {
     if (!currentPw || !newPw) {
@@ -223,38 +206,6 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({
           </div>
         )}
 
-        {/* Month Closing Confirmation Dialog */}
-        {closeConfirmOpen && (
-          <div className="bg-amber-50 border-2 border-amber-400 rounded-lg p-4 space-y-3 shadow-md">
-            <div className="flex items-start gap-3">
-              <span className="text-2xl">🔒</span>
-              <div className="space-y-1">
-                <h4 className="font-bold text-sm text-amber-950">
-                  Confirm Closing Month: {formatMonthIndian(selectedYear, selectedMonth)}
-                </h4>
-                <p className="text-xs text-amber-900 leading-relaxed">
-                  Are you sure you want to close and finalize this month? Once closed, <strong>no entries can be added, modified, or deleted</strong> for {formatMonthIndian(selectedYear, selectedMonth)}. This seals the official logbook for audit.
-                </p>
-              </div>
-            </div>
-            <div className="flex gap-2 justify-end pt-1">
-              <button
-                onClick={() => setCloseConfirmOpen(false)}
-                className="px-3 py-1.5 text-xs font-medium border border-gray-300 rounded bg-white hover:bg-gray-50 text-gray-700"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleCloseMonth}
-                disabled={isClosingMonth}
-                className="px-4 py-1.5 text-xs font-bold rounded bg-amber-700 hover:bg-amber-800 text-white flex items-center gap-1"
-              >
-                {isClosingMonth ? 'Closing...' : 'Yes, Close Month Now'}
-              </button>
-            </div>
-          </div>
-        )}
-
         {/* Monthly KM Status & Month Closing Status */}
         <div className="bg-white border border-[#D4DEF0] rounded p-4 space-y-3">
           <div className="flex items-center justify-between mb-1 flex-wrap gap-2">
@@ -285,17 +236,9 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({
                   setSelectedMonth(m);
                 }}
               />
-              {!isCurrentMonthClosed ? (
-                <button
-                  onClick={() => setCloseConfirmOpen(true)}
-                  className="bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold px-3 py-1.5 rounded flex items-center gap-1 transition-colors cursor-pointer"
-                  title="Close and lock this month to prevent further edits"
-                >
-                  🔒 Close Month
-                </button>
-              ) : (
-                <span className="text-xs text-amber-800 italic bg-amber-50 px-2 py-1 rounded border border-amber-200">
-                  Locked
+              {isCurrentMonthClosed && (
+                <span className="text-xs text-amber-800 font-semibold bg-amber-50 px-2 py-1 rounded border border-amber-200">
+                  🔒 Closed (Admin Only)
                 </span>
               )}
             </div>
@@ -307,15 +250,15 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({
         {/* New Log Entry Button */}
         {isCurrentMonthClosed ? (
           <div className="bg-amber-50 border border-amber-200 text-amber-800 rounded p-3 text-center text-xs font-medium">
-            🔒 {formatMonthIndian(selectedYear, selectedMonth)} is closed and finalized. Adding or editing entries for this month is not allowed.
+            🔒 {formatMonthIndian(selectedYear, selectedMonth)} is closed and locked by Administrator. Adding or editing entries for this month is not allowed for users.
           </div>
         ) : (
           <button
-            onClick={onNewEntry}
+            onClick={() => onNewEntry(currentMonthKey)}
             className="w-full bg-[#003087] hover:bg-[#00236A] text-white font-bold py-3 rounded text-sm flex items-center justify-center gap-2 transition-colors shadow-xs cursor-pointer"
             style={{ fontFamily: "'Work Sans', sans-serif" }}
           >
-            <span className="text-lg font-light leading-none">+</span> New Log Entry
+            <span className="text-lg font-light leading-none">+</span> New Log Entry for {formatMonthIndian(selectedYear, selectedMonth)}
           </button>
         )}
 

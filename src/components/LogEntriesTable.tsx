@@ -138,12 +138,12 @@ export const LogEntriesTable: React.FC<LogEntriesTableProps> = ({
                 </td>
                 {(isAdmin || onEdit) && (
                   <td className={cellClass}>
-                    {entryClosed ? (
+                    {entryClosed && !isAdmin ? (
                       <span className="text-[11px] text-[#8A99AE] italic flex items-center gap-1">
                         🔒 Locked
                       </span>
                     ) : (
-                      <div className="flex gap-2">
+                      <div className="flex gap-2 items-center">
                         {onEdit && (
                           <button
                             onClick={() => onEdit(entry)}
@@ -159,6 +159,11 @@ export const LogEntriesTable: React.FC<LogEntriesTableProps> = ({
                           >
                             Del
                           </button>
+                        )}
+                        {entryClosed && isAdmin && (
+                          <span className="text-[10px] text-amber-700 bg-amber-50 border border-amber-200 px-1 rounded font-medium">
+                            Closed
+                          </span>
                         )}
                       </div>
                     )}

@@ -24,6 +24,7 @@ interface AdminDashboardProps {
   onLogout: () => void;
   onEditEntry: (entry: LogEntry) => void;
   onDeleteEntry: (id: string) => void;
+  onNewEntry?: (selectedMonthKey?: string) => void;
   adminPassword?: string;
   onChangeAdminPassword?: (newPw: string) => void;
   onRefreshUsers?: () => void;
@@ -49,62 +50,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   onLogout,
   onEditEntry,
   onDeleteEntry,
+  onNewEntry,
   adminPassword = 'Bsnlatt',
   onChangeAdminPassword,
   onRefreshUsers,
 }) => {
-  const [activeTab, setActiveTab] = useState<'entries' | 'settings' | 'closed-months' | 'users' | 'database' | 'appearance' | 'password'>('entries');
-
-  // Database status states
-  const [dbStatus, setDbStatus] = useState<{
-    isMongoConnected: boolean;
-    storageType: string;
-    databaseName: string;
-    cluster: string;
-    user: string;
-    lastError?: string | null;
-    entriesCount: number;
-    usersCount: number;
-  } | null>(null);
-  const [isTestingDb, setIsTestingDb] = useState(false);
-  const [dbTestMessage, setDbTestMessage] = useState('');
-
-  // Fetch DB status on mount or tab click
-  const fetchDbStatus = async () => {
-    try {
-      const res = await fetch('/api/db-status');
-      if (res.ok) {
-        const data = await res.json();
-        setDbStatus(data);
-      }
-    } catch {}
-  };
-
-  React.useEffect(() => {
-    fetchDbStatus();
-  }, []);
-
-  const handleTestMongoConnection = async () => {
-    setIsTestingDb(true);
-    setDbTestMessage('');
-    try {
-      const res = await fetch('/api/db-connect', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-      });
-      const data = await res.json();
-      setDbStatus(data.status);
-      if (data.success) {
-        setDbTestMessage('✓ ' + data.message);
-      } else {
-        setDbTestMessage('⚠️ ' + data.message);
-      }
-    } catch (err: any) {
-      setDbTestMessage('Error connecting: ' + (err?.message || 'Network error'));
-    } finally {
-      setIsTestingDb(false);
-    }
-  };
+  const [activeTab, setActiveTab] = useState<'entries' | 'settings' | 'closed-months' | 'users' | 'appearance' | 'password'>('entries');
 
   // Settings tab states
   const [vehNoInput, setVehNoInput] = useState(vehicleNo);
@@ -337,7 +288,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   }
 
   const tabButtonClass = (tab: typeof activeTab) =>
-    `px-4 py-2.5 text-xs font-semibold uppercase tracking-wider border-b-2 whitespace-nowrap transition-colors cursor-pointer ${
+    `shrink-0 px-4 py-2.5 text-xs font-semibold uppercase tracking-wider border-b-2 whitespace-nowrap transition-colors cursor-pointer ${
       activeTab === tab
         ? 'border-[#003087] text-[#003087] bg-[#F5F8FD]'
         : 'border-transparent text-[#5A6A82] hover:text-[#003087]'
@@ -372,8 +323,148 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
       <div className="max-w-6xl mx-auto px-4 py-5">
         <div className="bg-white border border-[#D4DEF0] rounded overflow-hidden shadow-xs">
-          {/* Tabs */}
-          <div className="flex border-b border-[#EEF2F9] px-2 overflow-x-auto">
+          {/* Mobile Tabs Navigation (Visible on phones & mobile viewports) */}
+          <div className="block sm:hidden bg-[#F5F8FD] p-3 border-b border-[#D4DEF0] space-y-2.5">
+            <div className="flex items-center justify-between">
+              <span
+                className="text-[11px] font-bold text-[#003087] uppercase tracking-wider"
+                style={{ fontFamily: "'Work Sans', sans-serif" }}
+              >
+                Admin Navigation Tabs
+              </span>
+              <span
+                className="text-[10px] bg-[#003087] text-white font-bold px-2 py-0.5 rounded uppercase tracking-wider"
+                style={{ fontFamily: "'Work Sans', sans-serif" }}
+              >
+                {activeTab === 'entries' && `Entries (${entries.length})`}
+                {activeTab === 'settings' && 'Settings'}
+                {activeTab === 'closed-months' && `Closing (${closedMonths.length})`}
+                {activeTab === 'users' && `Users (${users.length})`}
+                {activeTab === 'appearance' && 'Appearance'}
+                {activeTab === 'password' && 'Password'}
+              </span>
+            </div>
+
+            {/* Quick Dropdown for 1-touch jump */}
+            <select
+              value={activeTab}
+              onChange={(e) => setActiveTab(e.target.value as any)}
+              className="w-full bg-white border-2 border-[#003087] text-[#003087] font-semibold text-xs rounded px-3 py-2 shadow-xs focus:outline-none"
+              style={{ fontFamily: "'Work Sans', sans-serif" }}
+            >
+              <option value="entries">📋 Logbook Entries ({entries.length})</option>
+              <option value="settings">⚙️ Vehicle & Settings</option>
+              <option value="closed-months">🔒 Month Closing & Locks ({closedMonths.length})</option>
+              <option value="users">👥 User Management ({users.length})</option>
+              <option value="appearance">🎨 Appearance & Logo</option>
+              <option value="password">🔑 Admin Password</option>
+            </select>
+
+            {/* Mobile Tab Grid: all 6 tabs clearly visible as touch buttons */}
+            <div className="grid grid-cols-2 gap-1.5 pt-0.5">
+              <button
+                type="button"
+                onClick={() => setActiveTab('entries')}
+                className={`p-2 rounded text-left flex items-center justify-between text-xs font-semibold cursor-pointer transition-colors ${
+                  activeTab === 'entries'
+                    ? 'bg-[#003087] text-white shadow-xs'
+                    : 'bg-white text-[#1A2A4A] border border-[#C8D5EB] hover:border-[#003087]'
+                }`}
+                style={{ fontFamily: "'Work Sans', sans-serif" }}
+              >
+                <span>📋 Entries</span>
+                <span
+                  className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${
+                    activeTab === 'entries' ? 'bg-white/20 text-white' : 'bg-[#EEF2F9] text-[#003087]'
+                  }`}
+                >
+                  {entries.length}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveTab('settings')}
+                className={`p-2 rounded text-left flex items-center justify-between text-xs font-semibold cursor-pointer transition-colors ${
+                  activeTab === 'settings'
+                    ? 'bg-[#003087] text-white shadow-xs'
+                    : 'bg-white text-[#1A2A4A] border border-[#C8D5EB] hover:border-[#003087]'
+                }`}
+                style={{ fontFamily: "'Work Sans', sans-serif" }}
+              >
+                <span>⚙️ Settings</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveTab('closed-months')}
+                className={`p-2 rounded text-left flex items-center justify-between text-xs font-semibold cursor-pointer transition-colors ${
+                  activeTab === 'closed-months'
+                    ? 'bg-[#003087] text-white shadow-xs'
+                    : 'bg-white text-[#1A2A4A] border border-[#C8D5EB] hover:border-[#003087]'
+                }`}
+                style={{ fontFamily: "'Work Sans', sans-serif" }}
+              >
+                <span>🔒 Closing</span>
+                <span
+                  className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${
+                    activeTab === 'closed-months' ? 'bg-white/20 text-white' : 'bg-[#EEF2F9] text-[#003087]'
+                  }`}
+                >
+                  {closedMonths.length}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveTab('users')}
+                className={`p-2 rounded text-left flex items-center justify-between text-xs font-semibold cursor-pointer transition-colors ${
+                  activeTab === 'users'
+                    ? 'bg-[#003087] text-white shadow-xs'
+                    : 'bg-white text-[#1A2A4A] border border-[#C8D5EB] hover:border-[#003087]'
+                }`}
+                style={{ fontFamily: "'Work Sans', sans-serif" }}
+              >
+                <span>👥 Users</span>
+                <span
+                  className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${
+                    activeTab === 'users' ? 'bg-white/20 text-white' : 'bg-[#EEF2F9] text-[#003087]'
+                  }`}
+                >
+                  {users.length}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveTab('appearance')}
+                className={`p-2 rounded text-left flex items-center justify-between text-xs font-semibold cursor-pointer transition-colors ${
+                  activeTab === 'appearance'
+                    ? 'bg-[#003087] text-white shadow-xs'
+                    : 'bg-white text-[#1A2A4A] border border-[#C8D5EB] hover:border-[#003087]'
+                }`}
+                style={{ fontFamily: "'Work Sans', sans-serif" }}
+              >
+                <span>🎨 Logo & Car</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveTab('password')}
+                className={`p-2 rounded text-left flex items-center justify-between text-xs font-semibold cursor-pointer transition-colors ${
+                  activeTab === 'password'
+                    ? 'bg-[#003087] text-white shadow-xs'
+                    : 'bg-white text-[#1A2A4A] border border-[#C8D5EB] hover:border-[#003087]'
+                }`}
+                style={{ fontFamily: "'Work Sans', sans-serif" }}
+              >
+                <span>🔑 Password</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Desktop / Tablet Tabs (Horizontal strip for sm and wider) */}
+          <div className="hidden sm:flex border-b border-[#EEF2F9] px-2 overflow-x-auto">
             <button
               className={tabButtonClass('entries')}
               onClick={() => setActiveTab('entries')}
@@ -408,21 +499,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               style={{ fontFamily: "'Work Sans', sans-serif" }}
             >
               Appearance & Logo
-            </button>
-            <button
-              className={tabButtonClass('database')}
-              onClick={() => {
-                setActiveTab('database');
-                fetchDbStatus();
-              }}
-              style={{ fontFamily: "'Work Sans', sans-serif" }}
-            >
-              Database & MongoDB
-              {dbStatus?.isMongoConnected ? (
-                <span className="ml-1.5 inline-block w-2 h-2 rounded-full bg-emerald-500" title="Connected to MongoDB Atlas"></span>
-              ) : (
-                <span className="ml-1.5 inline-block w-2 h-2 rounded-full bg-amber-400" title="Using persistent server storage"></span>
-              )}
             </button>
             <button
               className={tabButtonClass('password')}
@@ -467,14 +543,24 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     )}
                   </div>
 
-                  {entries.length > 0 && (
-                    <button
-                      onClick={() => setShowClearConfirm(true)}
-                      className="text-xs text-red-600 hover:text-red-800 font-semibold px-3 py-1.5 border border-red-200 rounded hover:bg-red-50 transition-colors"
-                    >
-                      Clear All Entries
-                    </button>
-                  )}
+                  <div className="flex gap-2 items-center">
+                    {onNewEntry && (
+                      <button
+                        onClick={() => onNewEntry(monthFilter || undefined)}
+                        className="bg-[#003087] hover:bg-[#00236A] text-white text-xs font-bold px-3.5 py-1.5 rounded flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
+                      >
+                        <span>+</span> New Log Entry {monthFilter ? `(${monthFilter})` : ''}
+                      </button>
+                    )}
+                    {entries.length > 0 && (
+                      <button
+                        onClick={() => setShowClearConfirm(true)}
+                        className="text-xs text-red-600 hover:text-red-800 font-semibold px-3 py-1.5 border border-red-200 rounded hover:bg-red-50 transition-colors cursor-pointer"
+                      >
+                        Clear All Entries
+                      </button>
+                    )}
+                  </div>
                 </div>
 
                 {showClearConfirm && (
@@ -1054,100 +1140,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               </div>
             )}
 
-            {/* Tab: Database & MongoDB Storage */}
-            {activeTab === 'database' && (
-              <div className="max-w-2xl space-y-5">
-                <div>
-                  <h3
-                    className="font-semibold text-base text-[#1A2A4A]"
-                    style={{ fontFamily: "'Work Sans', sans-serif" }}
-                  >
-                    Database & Cloud Storage Configuration
-                  </h3>
-                  <p
-                    className="text-xs text-[#5A6A82] mt-0.5"
-                    style={{ fontFamily: "'Inter', sans-serif" }}
-                  >
-                    Manage connection to MongoDB Atlas and view real-time synchronization status.
-                  </p>
-                </div>
-
-                {/* Connection Status Card */}
-                <div className={`p-4 rounded-lg border ${
-                  dbStatus?.isMongoConnected
-                    ? 'bg-emerald-50/70 border-emerald-200'
-                    : 'bg-amber-50/70 border-amber-200'
-                }`}>
-                  <div className="flex items-center justify-between flex-wrap gap-2">
-                    <div className="flex items-center gap-2.5">
-                      <span className={`w-3 h-3 rounded-full ${
-                        dbStatus?.isMongoConnected ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'
-                      }`}></span>
-                      <span
-                        className="font-bold text-sm"
-                        style={{
-                          fontFamily: "'Work Sans', sans-serif",
-                          color: dbStatus?.isMongoConnected ? '#065F46' : '#92400E',
-                        }}
-                      >
-                        {dbStatus?.isMongoConnected
-                          ? 'MongoDB Atlas: Connected & Active'
-                          : 'Fallback Mode: Local Server Storage Active'}
-                      </span>
-                    </div>
-
-                    <button
-                      onClick={handleTestMongoConnection}
-                      disabled={isTestingDb}
-                      className="text-xs bg-white border border-[#C8D5EB] hover:border-[#003087] text-[#003087] font-semibold px-3 py-1.5 rounded transition-colors cursor-pointer shadow-xs disabled:opacity-50"
-                      style={{ fontFamily: "'Work Sans', sans-serif" }}
-                    >
-                      {isTestingDb ? 'Testing Connection...' : 'Test / Reconnect MongoDB'}
-                    </button>
-                  </div>
-
-                  <div className="mt-3 text-xs space-y-1 text-[#475569]" style={{ fontFamily: "'Inter', sans-serif" }}>
-                    <div><span className="font-semibold">Cluster:</span> {dbStatus?.cluster || 'cluster0.9jhlllv.mongodb.net'}</div>
-                    <div><span className="font-semibold">Database:</span> {dbStatus?.databaseName || 'bsnl_logbook'}</div>
-                    <div><span className="font-semibold">Database User:</span> {dbStatus?.user || 'jtovenjaramoodu_db_user'}</div>
-                    <div><span className="font-semibold">Current Active Storage:</span> {dbStatus?.storageType || 'Detecting...'}</div>
-                    <div><span className="font-semibold">Total Log Entries Synced:</span> {entries.length}</div>
-                    <div><span className="font-semibold">Registered Officers:</span> {users.length}</div>
-                  </div>
-
-                  {dbTestMessage && (
-                    <div className="mt-3 p-2.5 bg-white rounded border border-[#C8D5EB] text-xs font-medium">
-                      {dbTestMessage}
-                    </div>
-                  )}
-                </div>
-
-                {/* Network Access Guidance if Atlas connection is blocked by IP Access List */}
-                {(!dbStatus?.isMongoConnected || dbStatus?.lastError) && (
-                  <div className="p-4 bg-white rounded-lg border border-[#C8D5EB] shadow-xs">
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="text-amber-600 font-bold text-sm">💡 Quick Step for MongoDB Atlas Network Access:</span>
-                    </div>
-                    <p className="text-xs text-[#475569] leading-relaxed" style={{ fontFamily: "'Inter', sans-serif" }}>
-                      MongoDB Atlas clusters by default block incoming connections until allowed in the project network settings. To allow this cloud application to save directly to Atlas:
-                    </p>
-                    <ol className="mt-2.5 space-y-1.5 text-xs text-[#1E293B] list-decimal list-inside" style={{ fontFamily: "'Inter', sans-serif" }}>
-                      <li>Open your <strong>MongoDB Atlas Dashboard</strong> (<a href="https://cloud.mongodb.com" target="_blank" rel="noreferrer" className="text-[#003087] underline">cloud.mongodb.com</a>).</li>
-                      <li>In the left sidebar under <strong>Security</strong>, click <strong>Network Access</strong>.</li>
-                      <li>Click the green <strong>"Add IP Address"</strong> button.</li>
-                      <li>Click <strong>"Allow Access From Anywhere"</strong> (this automatically enters <code className="bg-slate-100 px-1 py-0.5 rounded font-mono text-slate-800">0.0.0.0/0</code>).</li>
-                      <li>Click <strong>Confirm</strong> (Atlas applies the change in ~30 seconds).</li>
-                      <li>Return here and click the <strong>"Test / Reconnect MongoDB"</strong> button above!</li>
-                    </ol>
-                    <div className="mt-3 p-2.5 bg-blue-50 border border-blue-200 rounded text-xs text-blue-900">
-                      🛡️ <strong>Zero Data Loss Guarantee:</strong> In the meantime, the application automatically uses the server's persistent JSON document storage, so you and your officers can log vehicle entries, manage users, and close months without any interruption. When Atlas is connected, all data synchronizes seamlessly.
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Tab 6: Password */}
+            {/* Tab: Password */}
             {activeTab === 'password' && (
               <div className="max-w-sm space-y-3">
                 <h3

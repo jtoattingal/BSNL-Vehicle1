@@ -7,7 +7,8 @@
       "name": "JTO (Network), Attingal",
       "designation": "Junior Telecom Officer (Network)",
       "password": "Bsnl",
-      "active": true
+      "active": true,
+      "_id": "6a9ad4872f168be437e59842"
     },
     {
       "id": "2",
@@ -15,7 +16,8 @@
       "name": "JTO (Network), Varkala",
       "designation": "Junior Telecom Officer (Network)",
       "password": "Bsnl",
-      "active": true
+      "active": true,
+      "_id": "6a9ad4872f168be437e59843"
     },
     {
       "id": "3",
@@ -23,7 +25,8 @@
       "name": "SDE (Network), Kilimanoor",
       "designation": "Sub-Divisional Engineer (Network)",
       "password": "Bsnl",
-      "active": true
+      "active": true,
+      "_id": "6a9ad4872f168be437e59844"
     },
     {
       "id": "4",
@@ -31,7 +34,8 @@
       "name": "AGM (Network), Attingal",
       "designation": "Assistant General Manager (Network)",
       "password": "Bsnl",
-      "active": true
+      "active": true,
+      "_id": "6a9ad4872f168be437e59845"
     }
   ],
   "settings": {
@@ -41,6 +45,7 @@
     "logoUrl": "/assets/bsnl_logo.jpg",
     "vehicleImg": "/assets/vehicle.jpeg",
     "startDate": "2026-08-01",
-    "closedMonths": []
+    "closedMonths": [],
+    "_id": "6a9ad4872f168be437e59847"
   }
 }

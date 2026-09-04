@@ -17,13 +17,9 @@ interface DatabaseSchema {
 const DATA_DIR = path.join(process.cwd(), 'data');
 const DB_FILE = path.join(DATA_DIR, 'db.json');
 
-const DEFAULT_MONGO_URI = "mongodb+srv://jtovenjaramoodu_db_user:3n0iswyR72ELRESC@cluster0.9jhlllv.mongodb.net/bsnl_logbook?appName=Cluster0";
-
 let mongoClient: MongoClient | null = null;
 let mongoDb: Db | null = null;
 let isMongoConnected = false;
-let mongoLastError: string | null = null;
-let currentMongoUri: string = process.env.MONGODB_URI || DEFAULT_MONGO_URI;
 
 // Initialize in-memory cache / file store
 let localStore: DatabaseSchema = {
@@ -67,110 +63,63 @@ function saveLocalStore(): void {
   }
 }
 
-export async function connectMongo(uriToUse?: string): Promise<{ success: boolean; message: string }> {
-  const uri = (uriToUse || process.env.MONGODB_URI || DEFAULT_MONGO_URI).trim();
-  currentMongoUri = uri;
-
-  try {
-    console.log('Attempting MongoDB connection to Atlas...');
-    if (mongoClient) {
-      try {
-        await mongoClient.close();
-      } catch {}
-    }
-
-    mongoClient = new MongoClient(uri, {
-      serverSelectionTimeoutMS: 5000,
-      connectTimeoutMS: 5000,
-    });
-
-    await mongoClient.connect();
-    // Use bsnl_logbook or database in URI
-    mongoDb = mongoClient.db('bsnl_logbook');
-    isMongoConnected = true;
-    mongoLastError = null;
-    console.log('✓ Successfully connected to MongoDB Atlas (bsnl_logbook)!');
-
-    // Sync collections
-    const entriesCount = await mongoDb.collection('entries').countDocuments();
-    if (entriesCount === 0 && localStore.entries.length > 0) {
-      await mongoDb.collection('entries').insertMany(localStore.entries as any);
-    } else if (entriesCount > 0) {
-      // Sync from MongoDB into local cache for instantaneous reads
-      const remoteEntries: any[] = await mongoDb.collection('entries').find({}).toArray();
-      localStore.entries = remoteEntries.map((doc) => ({
-        id: doc.id || doc._id.toString(),
-        date: doc.date,
-        startTime: doc.startTime,
-        startStation: doc.startStation,
-        actualOMR: doc.actualOMR,
-        logbookOMR: doc.logbookOMR,
-        placesVisited: doc.placesVisited,
-        purpose: doc.purpose,
-        endStation: doc.endStation,
-        actualCMR: doc.actualCMR,
-        logbookCMR: doc.logbookCMR,
-        km: doc.km,
-        remarks: doc.remarks || '',
-        user: doc.user,
-      }));
-      saveLocalStore();
-    }
-
-    const usersCount = await mongoDb.collection('users').countDocuments();
-    if (usersCount === 0 && localStore.users.length > 0) {
-      await mongoDb.collection('users').insertMany(localStore.users as any);
-    }
-
-    const settingsDoc: any = await mongoDb.collection('settings').findOne({});
-    if (!settingsDoc && localStore.settings) {
-      await mongoDb.collection('settings').insertOne(localStore.settings as any);
-    } else if (settingsDoc) {
-      localStore.settings = {
-        ...INITIAL_SETTINGS,
-        ...settingsDoc,
-      };
-      saveLocalStore();
-    }
-
-    return {
-      success: true,
-      message: 'Successfully connected to MongoDB Atlas (database: bsnl_logbook). All entries, users, and settings are synced.',
-    };
-  } catch (err: any) {
-    isMongoConnected = false;
-    const errMsg = err?.cause?.message || err?.message || String(err);
-    console.warn('MongoDB Atlas connection failed:', errMsg);
-
-    if (errMsg.includes('alert number 80') || errMsg.includes('SSL alert') || errMsg.includes('tlsv1')) {
-      mongoLastError = 'Atlas Network Access: Your IP is not in MongoDB Atlas IP Access List. In MongoDB Atlas, go to "Network Access" -> "Add IP Address" -> click "Allow Access From Anywhere" (0.0.0.0/0) -> Confirm.';
-    } else {
-      mongoLastError = errMsg;
-    }
-
-    return {
-      success: false,
-      message: mongoLastError,
-    };
-  }
-}
-
-export function getDbStatus() {
-  return {
-    isMongoConnected,
-    storageType: isMongoConnected ? 'MongoDB Atlas (Cluster0.9jhlllv.mongodb.net / bsnl_logbook)' : 'Local Persistent Document Storage (data/db.json)',
-    databaseName: 'bsnl_logbook',
-    cluster: 'Cluster0.9jhlllv.mongodb.net',
-    user: 'jtovenjaramoodu_db_user',
-    lastError: mongoLastError,
-    entriesCount: localStore.entries.length,
-    usersCount: localStore.users.length,
-  };
-}
-
 export async function initDatabase(): Promise<void> {
   loadLocalStore();
-  await connectMongo();
+
+  const mongoUri = process.env.MONGODB_URI;
+  if (mongoUri && mongoUri.trim().length > 0) {
+    try {
+      console.log('Connecting to MongoDB via MONGODB_URI...');
+      mongoClient = new MongoClient(mongoUri.trim(), {
+        serverSelectionTimeoutMS: 4000,
+      });
+      await mongoClient.connect();
+      mongoDb = mongoClient.db();
+      isMongoConnected = true;
+      console.log('✓ MongoDB connected successfully!');
+
+      // Sync collections if needed
+      const entriesCount = await mongoDb.collection('entries').countDocuments();
+      if (entriesCount === 0 && localStore.entries.length > 0) {
+        await mongoDb.collection('entries').insertMany(localStore.entries as any);
+      } else if (entriesCount > 0) {
+        const remoteEntries: any[] = await mongoDb.collection('entries').find({}).toArray();
+        localStore.entries = remoteEntries.map((doc) => ({
+          id: doc.id || doc._id.toString(),
+          date: doc.date,
+          startTime: doc.startTime,
+          startStation: doc.startStation,
+          actualOMR: doc.actualOMR,
+          logbookOMR: doc.logbookOMR,
+          placesVisited: doc.placesVisited,
+          purpose: doc.purpose,
+          endStation: doc.endStation,
+          actualCMR: doc.actualCMR,
+          logbookCMR: doc.logbookCMR,
+          km: doc.km,
+          remarks: doc.remarks || '',
+          user: doc.user,
+        }));
+        saveLocalStore();
+      }
+
+      const usersCount = await mongoDb.collection('users').countDocuments();
+      if (usersCount === 0 && localStore.users.length > 0) {
+        await mongoDb.collection('users').insertMany(localStore.users as any);
+      }
+
+      const settingsDoc: any = await mongoDb.collection('settings').findOne({});
+      if (!settingsDoc && localStore.settings) {
+        await mongoDb.collection('settings').insertOne(localStore.settings as any);
+      } else if (settingsDoc) {
+        localStore.settings = { ...INITIAL_SETTINGS, ...settingsDoc };
+        saveLocalStore();
+      }
+    } catch (err: any) {
+      console.warn('MongoDB connection not available, using local persistent storage.');
+      isMongoConnected = false;
+    }
+  }
 }
 
 // Entries CRUD
@@ -197,13 +146,13 @@ export async function getAllEntries(): Promise<LogEntry[]> {
   return [...localStore.entries];
 }
 
-export async function saveEntry(entry: LogEntry): Promise<LogEntry> {
+export async function saveEntry(entry: LogEntry, isAdmin: boolean = false): Promise<LogEntry> {
   const currentSettings = await getSettings();
   const closedMonths = currentSettings.closedMonths || [];
   const entryMonth = entry.date.slice(0, 7); // YYYY-MM
 
-  if (closedMonths.includes(entryMonth)) {
-    throw new Error(`Month ${entryMonth} is closed and locked. No entries can be added or edited.`);
+  if (!isAdmin && closedMonths.includes(entryMonth)) {
+    throw new Error(`Month ${entryMonth} is closed and locked by Admin. Regular users are not allowed to enter or edit.`);
   }
 
   const startDate = currentSettings.startDate || '2026-08-01';
@@ -212,7 +161,7 @@ export async function saveEntry(entry: LogEntry): Promise<LogEntry> {
   }
 
   // Also check if an existing entry being edited was in a closed month
-  if (entry.id) {
+  if (!isAdmin && entry.id) {
     const existing = localStore.entries.find(e => e.id === entry.id);
     if (existing && closedMonths.includes(existing.date.slice(0, 7))) {
       throw new Error(`Cannot edit an entry belonging to closed month ${existing.date.slice(0, 7)}.`);
@@ -245,9 +194,9 @@ export async function saveEntry(entry: LogEntry): Promise<LogEntry> {
   return finalEntry;
 }
 
-export async function deleteEntry(id: string): Promise<boolean> {
+export async function deleteEntry(id: string, isAdmin: boolean = false): Promise<boolean> {
   const existing = localStore.entries.find(e => e.id === id);
-  if (existing) {
+  if (existing && !isAdmin) {
     const currentSettings = await getSettings();
     const closedMonths = currentSettings.closedMonths || [];
     const entryMonth = existing.date.slice(0, 7);
@@ -335,12 +284,21 @@ export async function saveUser(user: User): Promise<User> {
 
 export async function deleteUser(id: string): Promise<boolean> {
   if (isMongoConnected && mongoDb) {
-    await mongoDb.collection('users').deleteOne({ id });
+    try {
+      await mongoDb.collection('users').deleteMany({
+        $or: [
+          { id },
+          { username: id },
+        ],
+      });
+    } catch (e) {
+      console.error('Error deleting from mongo:', e);
+    }
   }
   const prevLen = localStore.users.length;
-  localStore.users = localStore.users.filter(u => u.id !== id);
+  localStore.users = localStore.users.filter(u => u.id !== id && u.username !== id);
   saveLocalStore();
-  return localStore.users.length < prevLen;
+  return true;
 }
 
 export async function updateUserPassword(userIdOrUsername: string, newPassword: string): Promise<boolean> {

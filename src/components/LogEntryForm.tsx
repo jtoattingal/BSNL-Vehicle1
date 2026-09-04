@@ -10,6 +10,8 @@ interface LogEntryFormProps {
   editEntry?: LogEntry;
   startDate?: string;
   closedMonths?: string[];
+  selectedMonth?: string;
+  isAdmin?: boolean;
 }
 
 export const LogEntryForm: React.FC<LogEntryFormProps> = ({
@@ -19,12 +21,31 @@ export const LogEntryForm: React.FC<LogEntryFormProps> = ({
   editEntry,
   startDate = '2026-08-01',
   closedMonths = [],
+  selectedMonth,
+  isAdmin = false,
 }) => {
-  // Default to 2026-08-01 if today is before start date, otherwise editEntry date or start date
   const minDate = startDate || '2026-08-01';
-  const initialDate = editEntry?.date || minDate;
 
-  const [date, setDate] = useState(initialDate);
+  // Compute initial date:
+  // If editing: use editEntry.date
+  // If new entry and selectedMonth (e.g. "2026-09"):
+  //   - If today is in selectedMonth, use today's date
+  //   - Otherwise, default to `${selectedMonth}-01`
+  // Otherwise default to minDate (or today if today >= minDate)
+  const computeInitialDate = () => {
+    if (editEntry?.date) return editEntry.date;
+    const today = new Date().toISOString().slice(0, 10);
+    if (selectedMonth && /^\d{4}-\d{2}$/.test(selectedMonth)) {
+      if (today.startsWith(selectedMonth)) {
+        return today;
+      }
+      return `${selectedMonth}-01`;
+    }
+    if (today >= minDate) return today;
+    return minDate;
+  };
+
+  const [date, setDate] = useState(computeInitialDate);
   const [startTime, setStartTime] = useState(editEntry?.startTime || '09:00');
   const [startStation, setStartStation] = useState(editEntry?.startStation || 'Attingal');
   const [actualOMR, setActualOMR] = useState(editEntry?.actualOMR?.toString() || '');
@@ -59,8 +80,8 @@ export const LogEntryForm: React.FC<LogEntryFormProps> = ({
       return;
     }
 
-    if (isSelectedMonthClosed) {
-      setErrorMessage(`Month ${dateMonthKey} is closed and locked. No entries can be added or edited.`);
+    if (isSelectedMonthClosed && !isAdmin) {
+      setErrorMessage(`Month ${formatMonthYear(date)} is closed and locked by Admin. Regular users are not allowed to enter or edit.`);
       return;
     }
 
@@ -116,12 +137,19 @@ export const LogEntryForm: React.FC<LogEntryFormProps> = ({
   return (
     <div className="bg-[#EEF2F9] min-h-screen">
       <div className="bg-white border-b border-[#D4DEF0] px-4 py-3 flex items-center justify-between">
-        <h2
-          className="text-[#003087] font-bold text-base"
-          style={{ fontFamily: "'Work Sans', sans-serif" }}
-        >
-          {editEntry ? 'Edit Log Entry' : 'New Log Entry'}
-        </h2>
+        <div>
+          <h2
+            className="text-[#003087] font-bold text-base"
+            style={{ fontFamily: "'Work Sans', sans-serif" }}
+          >
+            {editEntry ? 'Edit Log Entry' : 'New Log Entry'}
+          </h2>
+          {selectedMonth && !editEntry && (
+            <div className="text-xs text-[#5A6A82]">
+              Target Month: <span className="font-semibold text-[#003087]">{formatMonthYear(selectedMonth + '-01')}</span>
+            </div>
+          )}
+        </div>
         <button
           onClick={onCancel}
           className="text-[#5A6A82] text-sm hover:text-[#003087] cursor-pointer"
@@ -150,7 +178,7 @@ export const LogEntryForm: React.FC<LogEntryFormProps> = ({
           </div>
         )}
 
-        {isSelectedMonthClosed && (
+        {isSelectedMonthClosed && !isAdmin && (
           <div
             className="bg-amber-50 border border-amber-300 rounded p-3.5 text-amber-800 text-sm flex items-start gap-2.5"
             style={{ fontFamily: "'Inter', sans-serif" }}
@@ -159,7 +187,22 @@ export const LogEntryForm: React.FC<LogEntryFormProps> = ({
             <div>
               <div className="font-semibold text-amber-900">Month Closed & Locked</div>
               <div className="text-xs text-amber-700 mt-0.5">
-                The month of {formatMonthYear(date)} is already closed and finalized. Entries cannot be added or edited for a closed month.
+                The month of {formatMonthYear(date)} is closed by the Administrator. Only the Admin can make or modify entries for this month.
+              </div>
+            </div>
+          </div>
+        )}
+
+        {isSelectedMonthClosed && isAdmin && (
+          <div
+            className="bg-blue-50 border border-blue-300 rounded p-3.5 text-blue-900 text-sm flex items-start gap-2.5"
+            style={{ fontFamily: "'Inter', sans-serif" }}
+          >
+            <span className="text-lg leading-none">ℹ️</span>
+            <div>
+              <div className="font-semibold text-blue-900">Admin Authorization — Closed Month ({formatMonthYear(date)})</div>
+              <div className="text-xs text-blue-700 mt-0.5">
+                This month is closed for regular users, but as Administrator, you are permitted to add or update entries.
               </div>
             </div>
           </div>
@@ -184,7 +227,14 @@ export const LogEntryForm: React.FC<LogEntryFormProps> = ({
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
               />
-              <span className="text-[11px] text-[#8A99AE] block mt-0.5">Start: 01.08.2026</span>
+              <div className="flex items-center justify-between text-[11px] text-[#8A99AE] mt-0.5">
+                <span>Min: {minDate.split('-').reverse().join('.')}</span>
+                {selectedMonth && (
+                  <span className="text-[#003087] font-medium">
+                    {formatMonthYear(selectedMonth + '-01')}
+                  </span>
+                )}
+              </div>
             </div>
             <div>
               <label className={labelClass}>Start Time *</label>
@@ -344,15 +394,21 @@ export const LogEntryForm: React.FC<LogEntryFormProps> = ({
         <div className="flex gap-3 pb-8">
           <button
             onClick={handleSubmit}
-            disabled={isSelectedMonthClosed || isSubmitting}
+            disabled={(isSelectedMonthClosed && !isAdmin) || isSubmitting}
             className={`flex-1 font-semibold py-3 rounded text-sm transition-colors cursor-pointer flex items-center justify-center gap-2 ${
-              isSelectedMonthClosed
+              isSelectedMonthClosed && !isAdmin
                 ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                 : 'bg-[#003087] hover:bg-[#00236A] text-white'
             }`}
             style={{ fontFamily: "'Work Sans', sans-serif" }}
           >
-            {isSelectedMonthClosed ? '🔒 Month Closed (Save Disabled)' : isSubmitting ? 'Saving...' : 'Save Log Entry'}
+            {isSelectedMonthClosed && !isAdmin
+              ? '🔒 Month Closed (Save Disabled for Users)'
+              : isSubmitting
+              ? 'Saving...'
+              : isSelectedMonthClosed && isAdmin
+              ? 'Save Log Entry (Admin Override)'
+              : 'Save Log Entry'}
           </button>
           <button
             onClick={onCancel}

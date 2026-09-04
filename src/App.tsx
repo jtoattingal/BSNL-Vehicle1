@@ -268,6 +268,7 @@ export default function App() {
       return (
         <LoginView
           onLogin={handleLogin}
+          users={users}
           logoUrl={settings.logoUrl}
           vehicleImg={settings.vehicleImg}
           vehicleNo={settings.vehicleNo}
@@ -279,6 +280,7 @@ export default function App() {
         return (
           <LoginView
             onLogin={handleLogin}
+            users={users}
             logoUrl={settings.logoUrl}
             vehicleImg={settings.vehicleImg}
             vehicleNo={settings.vehicleNo}
