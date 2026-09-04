@@ -1,0 +1,6 @@
+{
+  "name": "BSNL Vehicle Digital Logbook",
+  "description": "Official vehicle digital logbook application for BSNL, featuring journey logs, meter reading calculations, monthly KM tracking, and print-ready reports.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

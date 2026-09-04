@@ -1,0 +1,46 @@
+{
+  "entries": [],
+  "users": [
+    {
+      "id": "1",
+      "username": "jto_attingal",
+      "name": "JTO (Network), Attingal",
+      "designation": "Junior Telecom Officer (Network)",
+      "password": "Bsnl",
+      "active": true
+    },
+    {
+      "id": "2",
+      "username": "jto_varkala",
+      "name": "JTO (Network), Varkala",
+      "designation": "Junior Telecom Officer (Network)",
+      "password": "Bsnl",
+      "active": true
+    },
+    {
+      "id": "3",
+      "username": "sde_kilimanoor",
+      "name": "SDE (Network), Kilimanoor",
+      "designation": "Sub-Divisional Engineer (Network)",
+      "password": "Bsnl",
+      "active": true
+    },
+    {
+      "id": "4",
+      "username": "agm_attingal",
+      "name": "AGM (Network), Attingal",
+      "designation": "Assistant General Manager (Network)",
+      "password": "Bsnl",
+      "active": true
+    }
+  ],
+  "settings": {
+    "vehicleNo": "KL 19 L 6865",
+    "monthlyAllowance": 2000,
+    "adminPassword": "Bsnlatt",
+    "logoUrl": "/assets/bsnl_logo.jpg",
+    "vehicleImg": "/assets/vehicle.jpeg",
+    "startDate": "2026-08-01",
+    "closedMonths": []
+  }
+}
